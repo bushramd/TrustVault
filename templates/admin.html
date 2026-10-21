@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TrustVault - Admin</title>
+</head>
+<body>
+  <h1>Activity log (latest 50)</h1>
+  <p><a href="{{ url_for('dashboard') }}">Back</a></p>
+  <table border="1" cellpadding="4">
+    <tr><th>Time</th><th>User</th><th>Action</th><th>Document</th><th>Outcome</th><th>Detail</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.ts }}</td><td>{{ r.username or '-' }}</td><td>{{ r.action }}</td>
+      <td>{{ r.document_id or '-' }}</td><td>{{ r.outcome }}</td><td>{{ r.detail or '' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
