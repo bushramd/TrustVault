@@ -44,6 +44,7 @@ def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if g.user is None:
+            log_event("route_access", "denied", detail="not logged in: " + request.path)
             return redirect(url_for("login"))
         return view(*args, **kwargs)
 
@@ -55,6 +56,7 @@ def role_required(*roles):
         @wraps(view)
         def wrapped(*args, **kwargs):
             if g.user is None:
+                log_event("route_access", "denied", detail="not logged in: " + request.path)
                 return redirect(url_for("login"))
             if g.user["role"] not in roles:
                 log_event("route_access", "denied", detail=request.path)
@@ -118,4 +120,4 @@ def admin():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
