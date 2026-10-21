@@ -15,3 +15,9 @@
 - **What it produced:** app.run(debug=True) at the bottom.
 - **What was wrong:** Debug mode shows an interactive debugger that can run code. It must never be on in production.
 - **What I did instead:** Debug mode now turns on only if FLASK_DEBUG=1. Commit: <paste link>
+
+## Instructions I give the AI every time
+- Check authorisation on the server for every route. A hidden button is not security.
+- Record refused attempts in the audit log, not only successful ones.
+- Use ? placeholders in every SQL query.
+- Tell me what could be wrong with the code you just gave me.
