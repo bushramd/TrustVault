@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>TrustVault - Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>Activity log (latest 50)</h1>
@@ -13,6 +15,7 @@
     <tr>
       <td>{{ r.ts }}</td><td>{{ r.username or '-' }}</td><td>{{ r.action }}</td>
       <td>{{ r.document_id or '-' }}</td><td>{{ r.outcome }}</td><td>{{ r.detail or '' }}</td>
+      <td class="{{ r.outcome }}">{{ r.outcome }}</td>
     </tr>
     {% endfor %}
   </table>
