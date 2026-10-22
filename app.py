@@ -14,6 +14,14 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 app.teardown_appcontext(close_db)
+UPLOAD_DIR = os.environ.get("TRUSTVAULT_UPLOADS") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "uploads"
+)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
+
+# allowed extension -> the first bytes a real file of that type starts with
+ALLOWED_TYPES = {".pdf": b"%PDF", ".png": b"\x89PNG", ".jpg": b"\xff\xd8\xff", ".txt": None}
 
 
 def log_event(action, outcome, document_id=None, detail="", user_id=None):
@@ -137,10 +145,10 @@ def can_access(user, doc, action):
     return row is not None
 
 
-def require_access(doc_id, action):
+def require_access(doc_id, action, audit_action=None):
     doc = get_db().execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
     if not can_access(g.user, doc, action):
-        log_event(action, "denied", document_id=doc_id, detail=request.path)
+        log_event(audit_action or action, "denied", document_id=doc_id, detail=request.path)
         abort(404)
     return doc
 
@@ -203,7 +211,7 @@ def upload():
 @app.route("/documents/<int:doc_id>/download")
 @login_required
 def download(doc_id):
-    doc = require_access(doc_id, "read")
+    doc = require_access(doc_id, "read", "download")
     log_event("download", "allowed", document_id=doc_id)
     return send_file(
         os.path.join(UPLOAD_DIR, doc["stored_name"]),
@@ -256,7 +264,7 @@ def share(doc_id):
 @app.route("/documents/<int:doc_id>/revoke/<int:grant_id>", methods=["POST"])
 @login_required
 def revoke(doc_id, grant_id):
-    require_access(doc_id, "share")
+    require_access(doc_id, "share", "revoke")
     db = get_db()
     grant = db.execute(
         "SELECT g.id, u.username, g.permission FROM grants g "
