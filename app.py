@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 from functools import wraps
 
 from flask import Flask, abort, g, redirect, render_template, request, send_file, session, url_for
@@ -153,19 +154,54 @@ def require_access(doc_id, action, audit_action=None):
     return doc
 
 
+def like_pattern(text):
+    text = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return "%" + text + "%"
+
+
 @app.route("/documents")
 @login_required
 def documents():
-    docs = get_db().execute(
+    q = request.args.get("q", "").strip()[:100]
+    owner = request.args.get("owner", "").strip()[:50]
+    category = request.args.get("category", "").strip()[:50]
+    date_from = request.args.get("date_from", "").strip()
+    date_to = request.args.get("date_to", "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_from):
+        date_from = ""
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_to):
+        date_to = ""
+
+    # The access rule comes first. Search filters are only added on top of it.
+    sql = (
         "SELECT d.id, d.name, d.category, d.created_at, d.owner_id, u.username AS owner "
         "FROM documents d JOIN users u ON u.id = d.owner_id "
         "WHERE d.is_deleted = 0 AND (d.owner_id = ? OR EXISTS ("
-        "  SELECT 1 FROM grants g WHERE g.document_id = d.id AND g.user_id = ?)) "
-        "ORDER BY d.id DESC",
-        (g.user["id"], g.user["id"]),
-    ).fetchall()
-    return render_template("documents.html", docs=docs, user=g.user)
+        "  SELECT 1 FROM grants g WHERE g.document_id = d.id AND g.user_id = ?))"
+    )
+    params = [g.user["id"], g.user["id"]]
+    if q:
+        sql += " AND d.name LIKE ? ESCAPE '\\'"
+        params.append(like_pattern(q))
+    if owner:
+        sql += " AND u.username = ?"
+        params.append(owner)
+    if category:
+        sql += " AND d.category LIKE ? ESCAPE '\\'"
+        params.append(like_pattern(category))
+    if date_from:
+        sql += " AND date(d.created_at) >= ?"
+        params.append(date_from)
+    if date_to:
+        sql += " AND date(d.created_at) <= ?"
+        params.append(date_to)
+    sql += " ORDER BY d.id DESC"
 
+    docs = get_db().execute(sql, params).fetchall()
+    return render_template(
+        "documents.html", docs=docs, user=g.user,
+        q=q, owner=owner, category=category, date_from=date_from, date_to=date_to,
+    )
 
 @app.route("/documents/upload", methods=["GET", "POST"])
 @role_required("owner")

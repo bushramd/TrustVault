@@ -7,6 +7,16 @@
   <h1>Documents</h1>
   <p><a href="{{ url_for('dashboard') }}">Back</a>
   {% if user.role == 'owner' %} | <a href="{{ url_for('upload') }}">Upload</a>{% endif %}</p>
+    <form method="get" action="{{ url_for('documents') }}">
+    <input name="q" placeholder="Name contains" value="{{ q }}">
+    <input name="owner" placeholder="Owner username" value="{{ owner }}">
+    <input name="category" placeholder="Category" value="{{ category }}">
+    From <input type="date" name="date_from" value="{{ date_from }}">
+    To <input type="date" name="date_to" value="{{ date_to }}">
+    <button type="submit">Search</button>
+    <a href="{{ url_for('documents') }}">Clear</a>
+  </form>
+  <br>
   <table border="1" cellpadding="4">
     <tr><th>Name</th><th>Owner</th><th>Category</th><th>Uploaded</th><th>Actions</th></tr>
     {% for d in docs %}

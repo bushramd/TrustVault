@@ -105,3 +105,33 @@ def test_audit_log_cannot_be_changed(make_client):
     with pytest.raises(sqlite3.DatabaseError):
         conn.execute("DELETE FROM audit_log")
     conn.close()
+
+def test_search_finds_own_document(make_client):
+    owner = make_client("owner1")
+    upload_text(owner, name="salary-letter.txt")
+    assert b"salary-letter" in owner.get("/documents?q=salary").data
+
+
+def test_search_never_shows_other_users_documents(make_client):
+    upload_text(make_client("owner1"), name="salary-letter.txt")
+    other = make_client("owner2")
+    assert b"salary-letter" not in other.get("/documents?q=salary").data
+    assert b"salary-letter" not in other.get("/documents?owner=owner1").data
+
+
+def test_search_shows_shared_document_until_revoked(make_client):
+    owner = make_client("owner1")
+    viewer = make_client("viewer1")
+    doc_id = upload_text(owner, name="contract.txt")
+    owner.post(f"/documents/{doc_id}/share", data={"username": "viewer1", "permission": "read"})
+    assert b"contract.txt" in viewer.get("/documents?q=contract").data
+    grant_id = query("SELECT id FROM grants WHERE document_id = ?", (doc_id,))[0][0]
+    owner.post(f"/documents/{doc_id}/revoke/{grant_id}")
+    assert b"contract.txt" not in viewer.get("/documents?q=contract").data
+
+
+def test_search_injection_attempt_leaks_nothing(make_client):
+    upload_text(make_client("owner1"), name="salary-letter.txt")
+    resp = make_client("owner2").get("/documents?q=' OR 1=1 --")
+    assert resp.status_code == 200
+    assert b"salary-letter" not in resp.data
