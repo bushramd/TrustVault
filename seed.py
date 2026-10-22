@@ -3,6 +3,9 @@ import sqlite3
 from werkzeug.security import generate_password_hash
 
 from db import DATABASE, init_db
+from db import database_path, init_db
+...
+conn = sqlite3.connect(database_path())
 
 DEMO_USERS = [
     ("admin1", "AdminDemo#2026", "admin"),
