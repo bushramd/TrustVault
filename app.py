@@ -2,6 +2,7 @@ import os
 import uuid
 import re
 from functools import wraps
+from seed import seed
 
 from flask import Flask, abort, g, redirect, render_template, request, send_file, session, url_for
 from werkzeug.security import check_password_hash
@@ -13,8 +14,10 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE") == "1",
 )
 app.teardown_appcontext(close_db)
+seed()
 UPLOAD_DIR = os.environ.get("TRUSTVAULT_UPLOADS") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "uploads"
 )
