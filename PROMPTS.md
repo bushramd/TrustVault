@@ -27,3 +27,9 @@
 - **What it produced:** require_access logged refusals using the permission name ("read"), while successful downloads were logged as "download".
 - **What was wrong:** A refused download showed up as "read denied", so searching the log for refused downloads found nothing. My automated test test_denied_download_is_in_audit_log failed and showed it.
 - **What I did instead:** Added an audit_action argument so download and revoke log under their own names. All 13 tests pass. Commit: <https://github.com/bushramd/TrustVault/commits/main/>
+
+## Entry 5 - 2026-10-23
+- **What I asked:** How to deploy the Flask app on Render.
+- **What happened:** My first deploy failed with "gunicorn: command not found".
+- **What was wrong:** The gunicorn line and the deployment changes were not committed yet, so Render built an older commit.
+- **What I did instead:** Added gunicorn to requirements.txt, committed and pushed, then checked that the deploy's source commit changed. Commit: <https://github.com/bushramd/TrustVault/commits/main/>
