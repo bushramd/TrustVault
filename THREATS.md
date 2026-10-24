@@ -28,7 +28,8 @@ Planned = not done yet. Accepted = I know about it and chose to leave it.
 | 21 | A downloaded file runs inside the browser | Files are sent as attachments, not displayed | Code review | Fixed |
 | 22 | Deleted documents stay on disk | Delete only hides the document. The stored file stays | None | Accepted for now. Retention is not built |
 | 23 | The edit permission does nothing | No route uses it yet | None | Planned |
-| 24 | The admin page shows only 50 rows and mixes everything | No filter or paging yet | None | Planned |
+| 24 | The admin pages show only the latest rows | A second admin page shows permission changes and refused attempts, the latest 100 of each. No paging or filters yet | test_admin_permissions_page_lists_grants_and_refusals | Partly |
 | 25 | Live data is lost when the free host restarts | Demo users are created again at startup | None | Accepted because the host is free |
 | 26 | Demo passwords are public in the README | They are demo only, so judges can log in. A real system would not do this | None | Accepted |
 | 27 | No security headers such as Content-Security-Policy | Not added yet | None | Planned |
+| 28 | A non-admin opens the permission page | role_required checks the role on the server and logs the refusal | test_viewer_cannot_open_permissions_page | Fixed |

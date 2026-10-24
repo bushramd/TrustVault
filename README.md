@@ -19,6 +19,8 @@ Live site: https://trustvault-bushra.onrender.com
 - An admin page shows the latest 50 audit entries. Allowed and denied are colour coded.
 - 17 automated tests cover access control, search and the audit log.
 - Deployed on Render over HTTPS.
+- A second admin page shows permission changes (grants and revokes) and refused attempts.
+- An admin page that shows only permission changes.
 
 ## What is not built yet
 - Editing a document. The edit permission can be granted, but no route uses it yet.
