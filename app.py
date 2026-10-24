@@ -123,6 +123,7 @@ def dashboard():
 
 @app.route("/admin")
 @role_required("admin")
+
 def admin():
     rows = get_db().execute(
         "SELECT a.ts, u.username, a.action, a.document_id, a.outcome, a.detail "
@@ -130,6 +131,26 @@ def admin():
         "ORDER BY a.id DESC LIMIT 50"
     ).fetchall()
     return render_template("admin.html", rows=rows)
+
+@app.route("/admin/permissions")
+@role_required("admin")
+def admin_permissions():
+    db = get_db()
+    changes = db.execute(
+        "SELECT a.ts, u.username, a.action, a.detail, d.name AS document "
+        "FROM audit_log a "
+        "LEFT JOIN users u ON u.id = a.user_id "
+        "LEFT JOIN documents d ON d.id = a.document_id "
+        "WHERE a.action IN ('grant', 'revoke') "
+        "ORDER BY a.id DESC LIMIT 100"
+    ).fetchall()
+    refused = db.execute(
+        "SELECT a.ts, u.username, a.action, a.document_id, a.detail "
+        "FROM audit_log a LEFT JOIN users u ON u.id = a.user_id "
+        "WHERE a.outcome = 'denied' "
+        "ORDER BY a.id DESC LIMIT 100"
+    ).fetchall()
+    return render_template("admin_permissions.html", changes=changes, refused=refused)
 def can_access(user, doc, action):
     """The ONE place that decides who may touch a document."""
     if user is None or doc is None or doc["is_deleted"]:

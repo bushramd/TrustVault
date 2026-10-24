@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>TrustVault - Permission changes</title>
+</head>
+<body>
+  <h1>Permission changes</h1>
+  <p><a href="{{ url_for('admin') }}">Back to activity log</a></p>
+
+  <h2>Access given or removed</h2>
+  <table>
+    <tr><th>Time</th><th>Done by</th><th>Action</th><th>Document</th><th>Detail</th></tr>
+    {% for r in changes %}
+    <tr>
+      <td>{{ r.ts }}</td><td>{{ r.username or '-' }}</td><td>{{ r.action }}</td>
+      <td>{{ r.document or '-' }}</td><td>{{ r.detail or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Nothing yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Refused attempts</h2>
+  <table>
+    <tr><th>Time</th><th>User</th><th>Action</th><th>Document id</th><th>Detail</th></tr>
+    {% for r in refused %}
+    <tr>
+      <td>{{ r.ts }}</td><td>{{ r.username or '-' }}</td><td class="denied">{{ r.action }}</td>
+      <td>{{ r.document_id or '-' }}</td><td>{{ r.detail or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Nothing yet.</td></tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

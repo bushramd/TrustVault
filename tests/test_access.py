@@ -135,3 +135,17 @@ def test_search_injection_attempt_leaks_nothing(make_client):
     resp = make_client("owner2").get("/documents?q=' OR 1=1 --")
     assert resp.status_code == 200
     assert b"salary-letter" not in resp.data
+
+def test_admin_permissions_page_lists_grants_and_refusals(make_client):
+    owner = make_client("owner1")
+    doc_id = upload_text(owner)
+    owner.post(f"/documents/{doc_id}/share", data={"username": "viewer1", "permission": "read"})
+    make_client("owner2").get(f"/documents/{doc_id}/download")
+    page = make_client("admin1").get("/admin/permissions")
+    assert page.status_code == 200
+    assert b"read to viewer1" in page.data
+    assert f"/documents/{doc_id}/download".encode() in page.data
+
+
+def test_viewer_cannot_open_permissions_page(make_client):
+    assert make_client("viewer1").get("/admin/permissions").status_code == 403  
