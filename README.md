@@ -17,15 +17,21 @@ Live site: https://trustvault-bushra.onrender.com
 - The audit log records logins, failed logins, uploads, downloads, deletes, grants, revokes and refused attempts.
 - The app has no route that changes or deletes audit rows, and database triggers refuse changes.
 - An admin page shows the latest 50 audit entries. Allowed and denied are colour coded.
-- 17 automated tests cover access control, search and the audit log.
+- 23 automated tests cover access control, search and the audit log.
 - Deployed on Render over HTTPS.
 - A second admin page shows permission changes (grants and revokes) and refused attempts.
 - An admin page that shows only permission changes.
+- Owners and users with an edit grant can replace a document's file. The new file goes through the same checks as an upload.
+- A second admin page shows permission changes and refused attempts.
+- Login is locked for 10 minutes after 10 failed attempts for the same username.
+- API.md: every route and who may call it
 
 ## What is not built yet
 - Editing a document. The edit permission can be granted, but no route uses it yet.
 - An admin page that shows only permission changes.
 - Login rate limiting and CSRF tokens.
+- CSRF tokens
+- Paging and filters on the admin pages
 
 ## Limits you should know about
 - The live site runs on a free host. When it restarts, the database and uploaded files are erased. The four demo accounts are created again at startup.
