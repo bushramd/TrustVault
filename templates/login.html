@@ -12,8 +12,23 @@
   {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
   <form method="post" action="{{ url_for('login') }}">
     <p><label>Username <input name="username" required></label></p>
-    <p><label>Password <input name="password" type="password" required></label></p>
+    <p>
+      <label>Password
+        <input id="password" name="password" type="password" required>
+      </label>
+      <button type="button" id="toggle-password" aria-label="Show password">Show</button>
+    </p>
     <button type="submit">Log in</button>
   </form>
+  <script>
+    var field = document.getElementById("password");
+    var toggle = document.getElementById("toggle-password");
+    toggle.addEventListener("click", function () {
+      var hidden = field.type === "password";
+      field.type = hidden ? "text" : "password";
+      toggle.textContent = hidden ? "Hide" : "Show";
+      toggle.setAttribute("aria-label", hidden ? "Hide password" : "Show password");
+    });
+  </script>
 </body>
 </html>
