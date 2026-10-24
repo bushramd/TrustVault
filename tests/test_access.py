@@ -148,4 +148,51 @@ def test_admin_permissions_page_lists_grants_and_refusals(make_client):
 
 
 def test_viewer_cannot_open_permissions_page(make_client):
-    assert make_client("viewer1").get("/admin/permissions").status_code == 403  
+    assert make_client("viewer1").get("/admin/permissions").status_code == 403
+
+def test_editor_can_replace_file(make_client):
+    owner = make_client("owner1")
+    viewer = make_client("viewer1")
+    doc_id = upload_text(owner, content=b"old text")
+    owner.post(f"/documents/{doc_id}/share", data={"username": "viewer1", "permission": "edit"})
+    resp = viewer.post(
+        f"/documents/{doc_id}/replace",
+        data={"file": (io.BytesIO(b"new text"), "note.txt")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    assert owner.get(f"/documents/{doc_id}/download").data == b"new text"
+
+
+def test_reader_cannot_replace_file(make_client):
+    owner = make_client("owner1")
+    viewer = make_client("viewer1")
+    doc_id = upload_text(owner, content=b"old text")
+    owner.post(f"/documents/{doc_id}/share", data={"username": "viewer1", "permission": "read"})
+    resp = viewer.post(
+        f"/documents/{doc_id}/replace",
+        data={"file": (io.BytesIO(b"new text"), "note.txt")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 404
+    assert owner.get(f"/documents/{doc_id}/download").data == b"old text"
+
+
+def test_replace_rejects_disguised_file(make_client):
+    owner = make_client("owner1")
+    doc_id = upload_text(owner, content=b"old text")
+    resp = owner.post(
+        f"/documents/{doc_id}/replace",
+        data={"file": (io.BytesIO(b"MZ not a pdf"), "evil.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400
+    assert owner.get(f"/documents/{doc_id}/download").data == b"old text"
+
+
+def test_login_locks_after_repeated_failures(make_client):
+    client = make_client()
+    for _ in range(10):
+        client.post("/login", data={"username": "owner1", "password": "wrong"})
+    resp = client.post("/login", data={"username": "owner1", "password": "pw-owner1"})
+    assert resp.status_code == 429 

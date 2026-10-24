@@ -1,13 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><meta charset="utf-8"><title>TrustVault - Documents</title></head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>TrustVault - Documents</title>
+</head>
 <body>
   <h1>Documents</h1>
   <p><a href="{{ url_for('dashboard') }}">Back</a>
   {% if user.role == 'owner' %} | <a href="{{ url_for('upload') }}">Upload</a>{% endif %}</p>
-    <form method="get" action="{{ url_for('documents') }}">
+  <form method="get" action="{{ url_for('documents') }}">
     <input name="q" placeholder="Name contains" value="{{ q }}">
     <input name="owner" placeholder="Owner username" value="{{ owner }}">
     <input name="category" placeholder="Category" value="{{ category }}">
@@ -17,13 +20,14 @@
     <a href="{{ url_for('documents') }}">Clear</a>
   </form>
   <br>
-  <table border="1" cellpadding="4">
+  <table>
     <tr><th>Name</th><th>Owner</th><th>Category</th><th>Uploaded</th><th>Actions</th></tr>
     {% for d in docs %}
     <tr>
       <td>{{ d.name }}</td><td>{{ d.owner }}</td><td>{{ d.category or '-' }}</td><td>{{ d.created_at }}</td>
       <td>
         <a href="{{ url_for('download', doc_id=d.id) }}">Download</a>
+        {% if d.can_edit %}| <a href="{{ url_for('replace', doc_id=d.id) }}">Replace file</a>{% endif %}
         {% if d.owner_id == user.id %}
         | <a href="{{ url_for('share', doc_id=d.id) }}">Share</a>
         <form method="post" action="{{ url_for('delete', doc_id=d.id) }}" style="display:inline">

@@ -93,6 +93,16 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        failed = get_db().execute(
+            "SELECT COUNT(*) FROM audit_log WHERE action = 'login' AND outcome = 'denied' "
+            "AND detail = ? AND ts >= datetime('now', '-10 minutes')",
+            ("username tried: " + username[:50],),
+        ).fetchone()[0]
+        if failed >= 10:
+            log_event("login", "denied", detail="locked out: " + username[:50])
+            return render_template(
+                "login.html", error="Too many failed attempts. Try again in 10 minutes."
+            ), 429
         user = get_db().execute(
             "SELECT id, password_hash FROM users WHERE username = ? AND is_active = 1",
             (username,),
@@ -197,13 +207,15 @@ def documents():
         date_to = ""
 
     # The access rule comes first. Search filters are only added on top of it.
-    sql = (
-        "SELECT d.id, d.name, d.category, d.created_at, d.owner_id, u.username AS owner "
+        sql = (
+        "SELECT d.id, d.name, d.category, d.created_at, d.owner_id, u.username AS owner, "
+        "(d.owner_id = ? OR EXISTS (SELECT 1 FROM grants e WHERE e.document_id = d.id "
+        "  AND e.user_id = ? AND e.permission = 'edit')) AS can_edit "
         "FROM documents d JOIN users u ON u.id = d.owner_id "
         "WHERE d.is_deleted = 0 AND (d.owner_id = ? OR EXISTS ("
         "  SELECT 1 FROM grants g WHERE g.document_id = d.id AND g.user_id = ?))"
     )
-    params = [g.user["id"], g.user["id"]]
+    params = [g.user["id"]] * 4
     if q:
         sql += " AND d.name LIKE ? ESCAPE '\\'"
         params.append(like_pattern(q))
@@ -231,28 +243,11 @@ def documents():
 @role_required("owner")
 def upload():
     if request.method == "POST":
-        f = request.files.get("file")
+        display_name, data, error = read_valid_upload(request.files.get("file"))
+        if error:
+            log_event("upload", "denied", detail=error)
+            return render_template("upload.html", error=error), 400
         category = request.form.get("category", "").strip()[:50]
-        if f is None or f.filename == "":
-            return render_template("upload.html", error="Choose a file."), 400
-        ext = os.path.splitext(f.filename)[1].lower()
-        display_name = secure_filename(f.filename) or ("document" + ext)
-        data = f.read()
-        if ext not in ALLOWED_TYPES or len(data) == 0:
-            log_event("upload", "denied", detail="rejected type or empty file")
-            return render_template("upload.html", error="File type not allowed."), 400
-        magic = ALLOWED_TYPES[ext]
-        if magic is not None:
-            content_ok = data.startswith(magic)
-        else:
-            try:
-                data.decode("utf-8")
-                content_ok = True
-            except UnicodeDecodeError:
-                content_ok = False
-        if not content_ok:
-            log_event("upload", "denied", detail="content does not match extension " + ext)
-            return render_template("upload.html", error="File content does not match its type."), 400
         stored_name = uuid.uuid4().hex
         with open(os.path.join(UPLOAD_DIR, stored_name), "wb") as out:
             out.write(data)
@@ -266,6 +261,27 @@ def upload():
         log_event("upload", "allowed", document_id=cur.lastrowid)
         return redirect(url_for("documents"))
     return render_template("upload.html")
+def read_valid_upload(f):
+    """Returns (display_name, data, error). Checks type, size and real content."""
+    if f is None or f.filename == "":
+        return None, None, "Choose a file."
+    ext = os.path.splitext(f.filename)[1].lower()
+    display_name = secure_filename(f.filename) or ("document" + ext)
+    data = f.read()
+    if ext not in ALLOWED_TYPES or len(data) == 0:
+        return None, None, "File type not allowed."
+    magic = ALLOWED_TYPES[ext]
+    if magic is not None:
+        content_ok = data.startswith(magic)
+    else:
+        try:
+            data.decode("utf-8")
+            content_ok = True
+        except UnicodeDecodeError:
+            content_ok = False
+    if not content_ok:
+        return None, None, "File content does not match its type."
+    return display_name, data, None
 
 
 @app.route("/documents/<int:doc_id>/download")
@@ -278,6 +294,27 @@ def download(doc_id):
         as_attachment=True,
         download_name=doc["name"],
     )
+@app.route("/documents/<int:doc_id>/replace", methods=["GET", "POST"])
+@login_required
+def replace(doc_id):
+    doc = require_access(doc_id, "edit")
+    if request.method == "POST":
+        display_name, data, error = read_valid_upload(request.files.get("file"))
+        if error:
+            log_event("edit", "denied", document_id=doc_id, detail=error)
+            return render_template("replace.html", doc=doc, error=error), 400
+        stored_name = uuid.uuid4().hex
+        with open(os.path.join(UPLOAD_DIR, stored_name), "wb") as out:
+            out.write(data)
+        db = get_db()
+        db.execute(
+            "UPDATE documents SET name = ?, stored_name = ?, size_bytes = ? WHERE id = ?",
+            (display_name, stored_name, len(data), doc_id),
+        )
+        db.commit()
+        log_event("edit", "allowed", document_id=doc_id, detail="file replaced")
+        return redirect(url_for("documents"))
+    return render_template("replace.html", doc=doc)
 
 
 @app.route("/documents/<int:doc_id>/delete", methods=["POST"])
